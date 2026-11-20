@@ -47,7 +47,7 @@ MAKEFUN_OUTPUT_DIR=/output node main.ts
 the bounty's caps. Outside the grader, point `MAKEFUN_OUTPUT_DIR` anywhere:
 
 ```sh
-MAKEFUN_OUTPUT_DIR=/tmp/cvrout2 node main.ts
+MAKEFUN_OUTPUT_DIR=/tmp/cvrout3 node main.ts
 ```
 
 ## Screenshots & tests
