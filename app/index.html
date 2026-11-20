@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cover Snap — GTA-style cover art maker</title>
+<meta name="description" content="Turn your photos and a caption into a Vice City-style multi-panel cover poster. Runs fully offline.">
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="./style.css">
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">
+    <span class="brand-mark" aria-hidden="true">CS</span>
+    <div class="brand-text">
+      <h1>Cover Snap</h1>
+      <p>GTA-style cover art, from your photos</p>
+    </div>
+  </div>
+  <div class="topbar-actions">
+    <span id="status" role="status"></span>
+    <a id="download-link" class="button ghost" download hidden>Download PNG</a>
+    <button id="export-button" class="button primary" type="button">Export PNG</button>
+  </div>
+</header>
+
+<main class="workspace">
+  <aside class="sidebar">
+    <section class="control-group">
+      <h2>Photos</h2>
+      <label class="button file-button">
+        Upload photos
+        <input id="photo-input" type="file" accept="image/*" multiple hidden>
+      </label>
+      <button id="load-samples" class="button" type="button">Load sample photos</button>
+      <div id="photo-library" class="photo-library" aria-label="Loaded photos"></div>
+      <button id="spread-photos" class="button small" type="button">Spread across panels</button>
+      <p class="hint">Photos stay on this device — nothing is uploaded anywhere.</p>
+    </section>
+
+    <section class="control-group">
+      <h2>Layout</h2>
+      <div id="layout-buttons" class="layout-buttons">
+        <button class="layout-button is-active" type="button" data-layout="grid">
+          <span class="layout-icon icon-grid" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+          2 × 2 grid
+        </button>
+        <button class="layout-button" type="button" data-layout="strips">
+          <span class="layout-icon icon-strips" aria-hidden="true"><i></i><i></i><i></i></span>
+          3 vertical strips
+        </button>
+        <button class="layout-button" type="button" data-layout="hero">
+          <span class="layout-icon icon-hero" aria-hidden="true"><i></i><i></i><i></i></span>
+          1 big + 2 small
+        </button>
+      </div>
+    </section>
+
+    <section class="control-group">
+      <h2>Caption</h2>
+      <label class="field">
+        <span>Title</span>
+        <input id="caption-input" type="text" maxlength="28" value="VICE NIGHTS" autocomplete="off" spellcheck="false">
+      </label>
+      <label class="field">
+        <span>Tagline</span>
+        <input id="tagline-input" type="text" maxlength="48" value="NEON CITY · SUNSET STRIP" autocomplete="off" spellcheck="false">
+      </label>
+    </section>
+
+    <section class="control-group">
+      <h2>Vice grade</h2>
+      <label class="field range">
+        <span>Sunset overlay <output id="grade-value">75%</output></span>
+        <input id="grade-input" type="range" min="0" max="100" value="75">
+      </label>
+      <label class="field range">
+        <span>Saturation <output id="saturation-value">140%</output></span>
+        <input id="saturation-input" type="range" min="100" max="200" value="140">
+      </label>
+    </section>
+
+    <section class="control-group">
+      <h2>Panel <span id="panel-indicator" class="panel-indicator">1</span></h2>
+      <div id="panel-chips" class="panel-chips" aria-label="Select a panel"></div>
+      <label class="field range">
+        <span>Zoom <output id="zoom-value">100%</output></span>
+        <input id="zoom-input" type="range" min="100" max="400" value="100">
+      </label>
+      <button id="reset-panel" class="button small" type="button">Reset framing</button>
+      <p class="hint">Drag a panel to reposition · scroll to zoom · double-click to reset.</p>
+    </section>
+
+    <section class="control-group">
+      <h2>Export size</h2>
+      <div id="size-buttons" class="size-buttons">
+        <button type="button" data-size="square" class="is-active">1080 × 1080</button>
+        <button type="button" data-size="portrait">1080 × 1350</button>
+        <button type="button" data-size="wide">1920 × 1080</button>
+      </div>
+    </section>
+  </aside>
+
+  <section class="stage" id="stage">
+    <canvas id="preview-canvas" aria-label="Live cover preview"></canvas>
+    <div id="stage-hint" class="stage-hint">Load sample photos or upload your own to start</div>
+  </section>
+</main>
+
+<script type="module" src="./main.js"></script>
+</body>
+</html>
