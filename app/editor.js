@@ -356,7 +356,7 @@ export function initEditor(state) {
     let index = hitTestPanel(currentRects, x, y);
     if (index === -1) index = state.selectedPanel;
     const panel = state.panels[index];
-    const photo = panel.photoId === null ? null : findPhoto(state, panel.photoId);
+    const photo = findPhoto(state, panel.photoId);
     if (!photo) return;
     state.selectedPanel = index;
     zoomPanelAt(panel, photo, currentRects[index], Math.exp(-evt.deltaY * 0.0012), x, y);
@@ -379,7 +379,7 @@ export function initEditor(state) {
     }
     if (evt.target instanceof HTMLInputElement || evt.target instanceof HTMLTextAreaElement) return;
     const panel = state.panels[state.selectedPanel];
-    const photo = panel.photoId === null ? null : findPhoto(state, panel.photoId);
+    const photo = findPhoto(state, panel.photoId);
     if (!photo) return;
     const step = 0.06;
     let handled = true;

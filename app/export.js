@@ -26,14 +26,16 @@ export async function exportPosterPNG(state, size) {
   canvas.height = size.h;
   const ctx = canvas.getContext('2d');
   if (!ctx) throw new Error('Canvas 2D is not available');
-  renderPoster(ctx, state, size.w, size.h, { selection: -1, badges: false });
-  const blob = await new Promise((resolve, reject) => {
-    canvas.toBlob((result) => (result ? resolve(result) : reject(new Error('PNG encoding failed'))), 'image/png');
-  });
-  // Free the offscreen backing store promptly instead of waiting for GC.
-  canvas.width = 0;
-  canvas.height = 0;
-  return blob;
+  try {
+    renderPoster(ctx, state, size.w, size.h, { selection: -1, badges: false });
+    return await new Promise((resolve, reject) => {
+      canvas.toBlob((result) => (result ? resolve(result) : reject(new Error('PNG encoding failed'))), 'image/png');
+    });
+  } finally {
+    // Free the offscreen backing store promptly instead of waiting for GC.
+    canvas.width = 0;
+    canvas.height = 0;
+  }
 }
 
 /** A tidy download name: cover-snap-<caption-slug>-<w>x<h>.png. */

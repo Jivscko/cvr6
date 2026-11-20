@@ -46,5 +46,6 @@ export function createEditorState() {
 
 /** The loaded photo with this id, or null when it was removed. */
 export function findPhoto(state, photoId) {
+  if (photoId === null) return null;
   return state.photos.find((photo) => photo.id === photoId) ?? null;
 }

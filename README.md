@@ -11,9 +11,9 @@ exported as a PNG. Original design; no Rockstar artwork, logos or game fonts.
 
 Everything runs offline in the browser: plain static files under `app/`, ES
 modules with relative imports, vendored fonts (Anton + Archivo Black, SIL OFL)
-and two sample photos. Photos never leave the device — uploads become object
-URLs and exports are local `canvas.toBlob` downloads. No fetch, no CDN, no
-telemetry.
+and two sample photos generated with Pillow. Photos never leave the device —
+uploads become object URLs and exports are local `canvas.toBlob` downloads.
+No fetch, no CDN, no telemetry.
 
 ## Features
 
@@ -24,8 +24,19 @@ telemetry.
 - Live caption + tagline editing (Anton for the title, Archivo Black for the
   tagline), adjustable sunset overlay and saturation.
 - Export PNG in 1080 × 1080, 1080 × 1350 or 1920 × 1080 with a download link.
-- "Load sample photos" button for an instant demo; optional deep links like
-  `?photo=both&caption=VICE%20NIGHTS&layout=hero&size=wide`.
+- "Load sample photos" button for an instant demo.
+
+### Deep links
+
+Optional query parameters preset the editor on load:
+
+```
+?photo=both&caption=VICE%20NIGHTS&tagline=NEON%20CITY&layout=hero&size=wide&grade=75&sat=140
+```
+
+`photo` is `boulevard`, `pier` or `both`; `layout` is `grid` / `strips` / `hero`;
+`size` is `square` / `portrait` / `wide`; `grade` (0–100) and `sat` (100–200)
+set the sunset overlay and saturation. Unknown values are ignored.
 
 ## Run it
 
@@ -45,11 +56,12 @@ MAKEFUN_OUTPUT_DIR=/output node main.ts
 `main.ts` copies `app/` and `screenshots/` to the output directory and writes
 `dossier.json` using the vendored `vendor/makefun-app.ts` (kept unchanged) with
 the bounty's caps, then reads the dossier back and verifies it is valid JSON
-(exiting 1 if anything failed). Outside the grader, point `MAKEFUN_OUTPUT_DIR`
-anywhere:
+(exiting 1 if anything failed). The output directory must be outside the repo
+(the copy step replaces its targets, so an in-repo output would delete the
+sources). Outside the grader, point `MAKEFUN_OUTPUT_DIR` anywhere else:
 
 ```sh
-MAKEFUN_OUTPUT_DIR=/tmp/cvrout4 node main.ts
+MAKEFUN_OUTPUT_DIR=/tmp/cvrout3 node main.ts
 ```
 
 ## Screenshots & tests
@@ -62,13 +74,14 @@ dossier limits (≤ 4 images, ≤ 256 KiB each, long side ≤ 1280, short side �
 The first image by name is the exported cover.
 
 ```sh
-python3 shot.py        # end-to-end checks + regenerates screenshots/
+python3 shot.py        # 13 end-to-end checks + regenerates screenshots/
 ```
 
 ## License
 
 MIT — see `LICENSE`. Bundled fonts are SIL OFL (licenses in `app/fonts/`).
-Sample photos in `app/samples/` were made for make.fun and are free to use.
+Sample photos in `app/samples/` were generated with Pillow for make.fun and
+are free to use.
 
 ---
 

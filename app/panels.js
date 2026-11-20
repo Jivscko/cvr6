@@ -25,7 +25,7 @@ export const MAX_ZOOM = 4;
 
 /** How many panels the layout draws (unknown layouts fall back to the grid). */
 export function panelCountOf(layout) {
-  return LAYOUTS[layout]?.panelCount ?? 4;
+  return LAYOUTS[layout]?.panelCount ?? LAYOUTS.grid.panelCount;
 }
 
 /** A panel with default framing, optionally holding a photo. */

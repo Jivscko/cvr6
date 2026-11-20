@@ -477,3 +477,7 @@ input[type='range']::-moz-range-thumb {
   .sidebar { width: auto; border-right: none; border-bottom: 1px solid var(--line); }
   .stage { min-height: 70vh; }
 }
+
+@media (prefers-reduced-motion: reduce) {
+  .button { transition: none; }
+}

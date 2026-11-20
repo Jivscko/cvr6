@@ -33,7 +33,6 @@ export function renderPoster(ctx, state, width, height, options = {}) {
   ctx.save();
   ctx.imageSmoothingEnabled = true;
   ctx.imageSmoothingQuality = 'high';
-
   drawSunsetBackground(ctx, width, height);
   panels.forEach((panel, i) => drawPanel(ctx, state, panel, rects[i], width, height));
   drawPanelSeams(ctx, rects, width, height);
@@ -56,7 +55,7 @@ function drawSunsetBackground(ctx, width, height) {
 /* ---------------------------------------------------------------- panels */
 
 function drawPanel(ctx, state, panel, rect, width, height) {
-  const photo = panel.photoId === null ? null : findPhoto(state, panel.photoId);
+  const photo = findPhoto(state, panel.photoId);
   ctx.save();
   ctx.beginPath();
   ctx.rect(rect.x, rect.y, rect.w, rect.h);
@@ -220,7 +219,7 @@ const SUN_SPRITE_CACHE_MAX = 10;
 
 /** A synthwave sun: warm gradient disc with horizontal slice gaps, drawn once per radius. */
 function getSunSprite(radius) {
-  const key = Math.round(radius);
+  const key = Math.max(1, Math.round(radius));
   const cached = sunSpriteCache.get(key);
   if (cached) return cached;
   const size = key * 2 + 4;

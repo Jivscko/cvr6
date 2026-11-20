@@ -8,12 +8,12 @@
 //   MAKEFUN_OUTPUT_DIR=/output node main.ts  # hand the entry in
 
 import { cpSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { join, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { buildDossier, DossierError } from './vendor/makefun-app.ts';
 
-const repoRoot = fileURLToPath(new URL('.', import.meta.url));
-const outputDir = process.env.MAKEFUN_OUTPUT_DIR ?? '/output';
+const repoRoot = resolve(fileURLToPath(new URL('.', import.meta.url)));
+const outputDir = resolve(process.env.MAKEFUN_OUTPUT_DIR ?? '/output');
 
 /** The gta6-cover-art-01 gate's caps, passed whole so refusals match the scorer. */
 const CAPS = {
@@ -23,6 +23,17 @@ const CAPS = {
   app_max_bytes: 50331648,
   app_path_max_bytes: 1000,
 } as const;
+
+/**
+ * Refuse an output directory inside the repo: copyFresh() removes the target
+ * before copying, so an outputDir at (or under) the repo root would delete the
+ * very app/ or screenshots/ it is about to copy.
+ */
+function assertOutputOutsideRepo(): void {
+  if (outputDir === repoRoot || outputDir.startsWith(repoRoot + sep)) {
+    throw new Error(`MAKEFUN_OUTPUT_DIR must be outside the repo (got ${outputDir})`);
+  }
+}
 
 /** Replace one output subdirectory with a fresh copy of its repo counterpart. */
 function copyFresh(name: string): void {
@@ -48,6 +59,7 @@ function verifyDossier(path: string): void {
 }
 
 try {
+  assertOutputOutsideRepo();
   mkdirSync(outputDir, { recursive: true });
   copyFresh('app');
   copyFresh('screenshots');
