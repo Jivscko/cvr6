@@ -1,6 +1,7 @@
 // The poster renderer: draws the whole cover into any 2D context at any size.
 // The editor preview and the PNG export call the same function, so what you see
-// is exactly what you get. Everything is sized from the canvas dimensions.
+// is exactly what you get. Everything is sized from the canvas dimensions, so
+// a 540px preview and a 1920px export are the same poster at two scales.
 
 import { findPhoto } from './state.js';
 import { activePanels, panelDrawRect, panelRects } from './panels.js';
@@ -8,7 +9,22 @@ import { activePanels, panelDrawRect, panelRects } from './panels.js';
 const FONT_CAPTION = 'Anton';
 const FONT_DISPLAY = '"Archivo Black"';
 
-/** Draw the finished cover. options: { selection: panel index or -1, badges: bool }. */
+/** The Vice City palette, in one place. */
+const SKY_STOPS = [
+  [0, '#1b0f3b'],
+  [0.4, '#5b1f6e'],
+  [0.72, '#d43d8f'],
+  [1, '#ff8a3d'],
+];
+const EMPTY_PANEL_BG = '#221436';
+const SEAM_COLOR = 'rgba(255, 255, 255, 0.92)';
+const SELECTION_COLOR = '#6ee7ff';
+
+/**
+ * Draw the finished cover.
+ * options: { selection: panel index or -1, badges: bool } — preview-only chrome;
+ * the exporter passes selection -1 / badges false for a clean cover.
+ */
 export function renderPoster(ctx, state, width, height, options = {}) {
   const { selection = -1, badges = false } = options;
   const rects = panelRects(state.layout, width, height);
@@ -32,10 +48,7 @@ export function renderPoster(ctx, state, width, height, options = {}) {
 
 function drawSunsetBackground(ctx, width, height) {
   const gradient = ctx.createLinearGradient(0, 0, 0, height);
-  gradient.addColorStop(0, '#1b0f3b');
-  gradient.addColorStop(0.4, '#5b1f6e');
-  gradient.addColorStop(0.72, '#d43d8f');
-  gradient.addColorStop(1, '#ff8a3d');
+  for (const [stop, color] of SKY_STOPS) gradient.addColorStop(stop, color);
   ctx.fillStyle = gradient;
   ctx.fillRect(0, 0, width, height);
 }
@@ -93,7 +106,7 @@ function drawViceGrade(ctx, state, rect) {
 }
 
 function drawEmptyPanel(ctx, rect, width, height) {
-  ctx.fillStyle = '#221436';
+  ctx.fillStyle = EMPTY_PANEL_BG;
   ctx.fillRect(rect.x, rect.y, rect.w, rect.h);
   const fontSize = Math.max(12, Math.min(34, Math.min(rect.w, rect.h) * 0.055));
   ctx.font = `${fontSize}px ${FONT_DISPLAY}`;
@@ -111,7 +124,7 @@ function drawEmptyPanel(ctx, rect, width, height) {
 
 /** Crisp white seams around every panel, collage style. */
 function drawPanelSeams(ctx, rects, width, height) {
-  ctx.strokeStyle = 'rgba(255, 255, 255, 0.92)';
+  ctx.strokeStyle = SEAM_COLOR;
   ctx.lineWidth = Math.max(2, Math.round(Math.min(width, height) * 0.0035));
   for (const rect of rects) {
     ctx.strokeRect(rect.x, rect.y, rect.w, rect.h);
@@ -203,6 +216,7 @@ function drawTaglineRules(ctx, centerX, y, tagHalf, tagSize, width) {
 /* ---------------------------------------------------------------- sun sprite */
 
 const sunSpriteCache = new Map();
+const SUN_SPRITE_CACHE_MAX = 10;
 
 /** A synthwave sun: warm gradient disc with horizontal slice gaps, drawn once per radius. */
 function getSunSprite(radius) {
@@ -229,7 +243,7 @@ function getSunSprite(radius) {
     const thickness = key * (0.025 + i * 0.024);
     ctx.fillRect(0, y, size, thickness);
   }
-  if (sunSpriteCache.size > 10) sunSpriteCache.clear();
+  if (sunSpriteCache.size >= SUN_SPRITE_CACHE_MAX) sunSpriteCache.clear();
   sunSpriteCache.set(key, sprite);
   return sprite;
 }
@@ -259,7 +273,7 @@ function drawPanelBadge(ctx, index, rect, width, height) {
 function drawSelectionOutline(ctx, rect, width, height) {
   const lineWidth = Math.max(2.5, Math.min(width, height) * 0.004);
   ctx.save();
-  ctx.strokeStyle = '#6ee7ff';
+  ctx.strokeStyle = SELECTION_COLOR;
   ctx.lineWidth = lineWidth;
   ctx.setLineDash([lineWidth * 4, lineWidth * 2.6]);
   ctx.shadowColor = 'rgba(110, 231, 255, 0.8)';
@@ -270,6 +284,7 @@ function drawSelectionOutline(ctx, rect, width, height) {
 
 /* ---------------------------------------------------------------- helpers */
 
+/** Letter spacing where the canvas supports it (Chromium does; others degrade gracefully). */
 function setLetterSpacing(ctx, px) {
   if ('letterSpacing' in ctx) ctx.letterSpacing = `${px}px`;
 }

@@ -1,7 +1,7 @@
-// Panel geometry: the three poster layouts, cover-fit framing math, and hit testing.
-// A panel's framing is { photoId, zoom, offsetX, offsetY }: zoom multiplies the
-// cover-fit scale (1 = exactly fills), offsets are fractions of the overflow
-// (-1..1), so a framing survives layout and export-size changes.
+// Panel geometry: the three poster layouts, cover-fit framing math, and hit
+// testing. A panel's framing is { photoId, zoom, offsetX, offsetY }: zoom
+// multiplies the cover-fit scale (1 = exactly fills), offsets are fractions of
+// the overflow (-1..1), so a framing survives layout and export-size changes.
 
 import { MAX_PANELS } from './state.js';
 
@@ -11,10 +11,24 @@ export const LAYOUTS = {
   hero: { label: '1 big + 2 small', panelCount: 3 },
 };
 
+/** Zoom bounds shared by the slider, the wheel and the keyboard. */
+export const MIN_ZOOM = 1;
+export const MAX_ZOOM = 4;
+
+/**
+ * @typedef {Object} Panel
+ * @property {number|null} photoId
+ * @property {number} zoom     multiplier on the cover-fit scale, MIN_ZOOM..MAX_ZOOM
+ * @property {number} offsetX  horizontal pan as a fraction of the overflow, -1..1
+ * @property {number} offsetY  vertical pan as a fraction of the overflow, -1..1
+ */
+
+/** How many panels the layout draws (unknown layouts fall back to the grid). */
 export function panelCountOf(layout) {
   return LAYOUTS[layout]?.panelCount ?? 4;
 }
 
+/** A panel with default framing, optionally holding a photo. */
 export function createPanel(photoId = null) {
   return { photoId, zoom: 1, offsetX: 0, offsetY: 0 };
 }
@@ -59,6 +73,7 @@ export function panelRects(layout, width, height) {
 
 /** The scale at which a photo exactly covers a rectangle (no letterboxing). */
 export function coverScale(photoW, photoH, rectW, rectH) {
+  if (photoW <= 0 || photoH <= 0) return 1;
   return Math.max(rectW / photoW, rectH / photoH);
 }
 
@@ -78,10 +93,18 @@ export function clamp(value, min, max) {
   return Math.min(max, Math.max(min, value));
 }
 
+/** Snap a framing back into its legal bounds (zoom 1..4, offsets -1..1). */
 export function clampPanelFraming(panel) {
-  panel.zoom = clamp(panel.zoom, 1, 4);
+  panel.zoom = clamp(panel.zoom, MIN_ZOOM, MAX_ZOOM);
   panel.offsetX = clamp(panel.offsetX, -1, 1);
   panel.offsetY = clamp(panel.offsetY, -1, 1);
+}
+
+/** Back to cover-fit, centered: the framing a fresh panel starts with. */
+export function resetPanelFraming(panel) {
+  panel.zoom = 1;
+  panel.offsetX = 0;
+  panel.offsetY = 0;
 }
 
 /** Zoom a panel by a factor while keeping the photo point under (px, py) fixed. */
@@ -89,7 +112,7 @@ export function zoomPanelAt(panel, photo, rect, factor, px, py) {
   const before = panelDrawRect(panel, photo, rect);
   const u = (px - before.x) / before.w;
   const v = (py - before.y) / before.h;
-  panel.zoom = clamp(panel.zoom * factor, 1, 4);
+  panel.zoom = clamp(panel.zoom * factor, MIN_ZOOM, MAX_ZOOM);
   const centered = panelDrawRect({ ...panel, offsetX: 0, offsetY: 0 }, photo, rect);
   const slackX = centered.w - rect.w;
   const slackY = centered.h - rect.h;

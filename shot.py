@@ -7,6 +7,7 @@ the caption, drags/zooms a panel, switches layouts and sizes, and captures the
 actual exported PNGs via the download link. Writes 4 screenshots into
 screenshots/ (first by name = the exported cover) and enforces the dossier
 limits with Pillow: <= 262144 bytes each, long side <= 1280, short side >= 480.
+Also asserts the app stays offline: every request must hit the local server.
 
 Run: python3 shot.py
 """
@@ -24,7 +25,7 @@ from playwright.sync_api import sync_playwright
 ROOT = Path(__file__).resolve().parent
 APP = ROOT / "app"
 SHOTS = ROOT / "screenshots"
-CHROME = "/root/.cache/ms-playwright/chromium-1228/chrome-linux64/chrome"
+CHROME = Path("/root/.cache/ms-playwright/chromium-1228/chrome-linux64/chrome")
 PORT = 8765
 MAX_BYTES = 262144
 MAX_LONG = 1280
@@ -40,6 +41,15 @@ def wait_for_server(port: int, timeout: float = 10.0) -> None:
         except OSError:
             time.sleep(0.1)
     raise RuntimeError("http.server did not come up")
+
+
+def stop_server(server: subprocess.Popen) -> None:
+    server.terminate()
+    try:
+        server.wait(timeout=5)
+    except subprocess.TimeoutExpired:
+        server.kill()
+        server.wait(timeout=5)
 
 
 def canvas_fingerprint(page) -> str:
@@ -75,7 +85,8 @@ def enforce_limits(path: Path) -> tuple[int, int, int]:
 def main() -> int:
     SHOTS.mkdir(exist_ok=True)
     for old in SHOTS.iterdir():
-        old.unlink()
+        if old.is_file():
+            old.unlink()
 
     server = subprocess.Popen(
         [sys.executable, "-m", "http.server", str(PORT), "--bind", "127.0.0.1", "--directory", str(APP)],
@@ -83,12 +94,19 @@ def main() -> int:
         stderr=subprocess.DEVNULL,
     )
     console_errors: list[str] = []
+    offsite_requests: list[str] = []
     checks: list[str] = []
+    local_origin = f"http://127.0.0.1:{PORT}"
 
     def check(name: str, ok: bool) -> None:
         checks.append(f"{'PASS' if ok else 'FAIL'}  {name}")
         if not ok:
             raise AssertionError(name)
+
+    def on_request(request) -> None:
+        url = request.url
+        if url.startswith(("http://", "https://")) and not url.startswith(local_origin):
+            offsite_requests.append(url)
 
     try:
         wait_for_server(PORT)
@@ -96,11 +114,11 @@ def main() -> int:
             raw_wide = Path(tmp) / "wide.png"
             raw_portrait = Path(tmp) / "portrait.png"
             with sync_playwright() as pw:
-                browser = pw.chromium.launch(
-                    executable_path=CHROME,
-                    headless=True,
-                    args=["--force-color-profile=srgb", "--disable-lcd-text", "--font-render-hinting=none"],
-                )
+                launch_args = ["--force-color-profile=srgb", "--disable-lcd-text", "--font-render-hinting=none"]
+                if CHROME.is_file():
+                    browser = pw.chromium.launch(executable_path=str(CHROME), headless=True, args=launch_args)
+                else:
+                    browser = pw.chromium.launch(headless=True, args=launch_args)
                 page = browser.new_page(
                     viewport={"width": 1280, "height": 800},
                     device_scale_factor=1,
@@ -108,8 +126,9 @@ def main() -> int:
                 )
                 page.on("console", lambda msg: console_errors.append(msg.text) if msg.type == "error" else None)
                 page.on("pageerror", lambda err: console_errors.append(str(err)))
+                page.on("request", on_request)
 
-                page.goto(f"http://127.0.0.1:{PORT}/", wait_until="load")
+                page.goto(f"{local_origin}/", wait_until="load")
                 page.wait_for_function("window.__coverSnapReady === true", timeout=15000)
                 check("page boots with fonts ready", True)
 
@@ -161,6 +180,11 @@ def main() -> int:
                 with page.expect_download() as download_info:
                     page.click("#export-button")
                 download_info.value.save_as(str(raw_portrait))
+                check(
+                    "portrait download named cover-snap-*.png",
+                    download_info.value.suggested_filename.startswith("cover-snap-")
+                    and download_info.value.suggested_filename.endswith(".png"),
+                )
                 with Image.open(raw_portrait) as im:
                     check("portrait export is 1080x1350 PNG", im.size == (1080, 1350) and im.format == "PNG")
                 check("download link offered", page.locator("#download-link").is_visible())
@@ -184,6 +208,7 @@ def main() -> int:
                     check("wide export is 1920x1080 PNG", im.size == (1920, 1080) and im.format == "PNG")
 
                 check("no console or page errors", not console_errors)
+                check("app stayed offline (all requests local)", not offsite_requests)
                 browser.close()
 
             # The cover: the real 1920x1080 export, scaled to 1280x720.
@@ -192,8 +217,7 @@ def main() -> int:
             with Image.open(raw_portrait) as im:
                 im.resize((1024, 1280), Image.Resampling.LANCZOS).save(SHOTS / "3-cover-portrait.png", format="PNG", optimize=True)
     finally:
-        server.terminate()
-        server.wait(timeout=5)
+        stop_server(server)
 
     print("End-to-end checks:")
     for line in checks:
@@ -201,6 +225,10 @@ def main() -> int:
     if console_errors:
         print("Console errors:")
         for line in console_errors:
+            print("  ", line)
+    if offsite_requests:
+        print("Off-site requests:")
+        for line in offsite_requests:
             print("  ", line)
 
     print("Screenshots:")
@@ -210,7 +238,7 @@ def main() -> int:
         fits = size <= MAX_BYTES and max(width, height) <= MAX_LONG and min(width, height) >= MIN_SHORT
         ok = ok and fits
         print(f"  {path.name}: {width}x{height}, {size} bytes {'OK' if fits else 'OVER LIMIT'}")
-    return 0 if ok and not console_errors else 1
+    return 0 if ok and not console_errors and not offsite_requests else 1
 
 
 if __name__ == "__main__":

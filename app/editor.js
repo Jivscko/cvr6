@@ -1,5 +1,7 @@
 // The editor: wires every control to the state, keeps the live preview canvas
-// sized to the chosen export aspect, and handles per-panel drag / wheel framing.
+// sized to the chosen export aspect, and handles per-panel drag / wheel /
+// keyboard framing. Every mutation ends in render(); there is no other path
+// to the canvas, so preview and export can never disagree.
 
 import { findPhoto } from './state.js';
 import {
@@ -10,6 +12,7 @@ import {
   panelDrawRect,
   clamp,
   clampPanelFraming,
+  resetPanelFraming,
   zoomPanelAt,
   hitTestPanel,
 } from './panels.js';
@@ -65,6 +68,7 @@ export function initEditor(state) {
     stageHint.hidden = state.photos.length > 0;
   }
 
+  /** Size the preview to the export aspect, at up to 2x for sharp screens. */
   function fitCanvas() {
     const size = findExportSize(state.exportSize);
     const aspect = size.w / size.h;
@@ -88,10 +92,14 @@ export function initEditor(state) {
 
   function syncControls() {
     for (const button of document.querySelectorAll('#layout-buttons .layout-button')) {
-      button.classList.toggle('is-active', button.dataset.layout === state.layout);
+      const active = button.dataset.layout === state.layout;
+      button.classList.toggle('is-active', active);
+      button.setAttribute('aria-pressed', String(active));
     }
     for (const button of document.querySelectorAll('#size-buttons button')) {
-      button.classList.toggle('is-active', button.dataset.size === state.exportSize);
+      const active = button.dataset.size === state.exportSize;
+      button.classList.toggle('is-active', active);
+      button.setAttribute('aria-pressed', String(active));
     }
     const count = panelCountOf(state.layout);
     panelChips.textContent = '';
@@ -101,6 +109,7 @@ export function initEditor(state) {
       chip.className = `panel-chip${i === state.selectedPanel ? ' is-active' : ''}`;
       chip.textContent = String(i + 1);
       chip.setAttribute('aria-label', `Select panel ${i + 1}`);
+      chip.setAttribute('aria-pressed', String(i === state.selectedPanel));
       chip.addEventListener('click', () => selectPanel(i));
       panelChips.appendChild(chip);
     }
@@ -209,8 +218,11 @@ export function initEditor(state) {
   byId('load-samples').addEventListener('click', async (evt) => {
     const button = evt.currentTarget;
     button.disabled = true;
-    await loadSamples(SAMPLE_PHOTOS.map((sample) => sample.name));
-    button.disabled = false;
+    try {
+      await loadSamples(SAMPLE_PHOTOS.map((sample) => sample.name));
+    } finally {
+      button.disabled = false;
+    }
   });
 
   byId('spread-photos').addEventListener('click', () => {
@@ -288,14 +300,12 @@ export function initEditor(state) {
   });
 
   byId('reset-panel').addEventListener('click', () => {
-    const panel = state.panels[state.selectedPanel];
-    panel.zoom = 1;
-    panel.offsetX = 0;
-    panel.offsetY = 0;
+    resetPanelFraming(state.panels[state.selectedPanel]);
     syncControls();
     render();
   });
 
+  /** A pointer event's position in poster (canvas backing-store) pixels. */
   function posterPoint(evt) {
     const bounds = canvas.getBoundingClientRect();
     return {
@@ -357,14 +367,15 @@ export function initEditor(state) {
     const { x, y } = posterPoint(evt);
     const index = hitTestPanel(currentRects, x, y);
     if (index === -1) return;
-    const panel = state.panels[index];
-    panel.zoom = 1;
-    panel.offsetX = 0;
-    panel.offsetY = 0;
+    resetPanelFraming(state.panels[index]);
     selectPanel(index);
   });
 
   window.addEventListener('keydown', (evt) => {
+    if (evt.key === 'Escape' && drag) {
+      endDrag();
+      return;
+    }
     if (evt.target instanceof HTMLInputElement || evt.target instanceof HTMLTextAreaElement) return;
     const panel = state.panels[state.selectedPanel];
     const photo = panel.photoId === null ? null : findPhoto(state, panel.photoId);
@@ -423,7 +434,7 @@ export function initEditor(state) {
 
   /* ---------------------------------------------------------------- query params */
 
-  /** Optional deep-link settings (?caption=…&layout=…&size=…&photo=boulevard|pier|both). */
+  /** Optional deep-link settings (?caption=…&tagline=…&layout=…&size=…&grade=…&sat=…&photo=boulevard|pier|both). */
   async function applyQueryParams(params) {
     if (params.has('caption')) state.caption = params.get('caption').slice(0, 28);
     if (params.has('tagline')) state.tagline = params.get('tagline').slice(0, 48);

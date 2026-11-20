@@ -1,10 +1,12 @@
 // Photo loading and assignment. Files never leave the device: uploads become
-// object URLs, samples are plain relative <img> loads from app/samples/.
+// object URLs (revoked when the photo is removed), samples are plain relative
+// <img> loads from app/samples/. No fetch, no network, no persistence.
 
 import { createPanel, ensurePanelPool, panelCountOf } from './panels.js';
 
 let nextPhotoId = 1;
 
+/** The bundled demo photos, in the order "Load sample photos" adds them. */
 export const SAMPLE_PHOTOS = [
   { name: 'boulevard', label: 'Boulevard' },
   { name: 'pier', label: 'Pier' },
@@ -31,6 +33,10 @@ export function loadPhotoFromFile(file) {
 /** Load a bundled sample photo by its base name (boulevard / pier). */
 export function loadSamplePhoto(name) {
   return new Promise((resolve, reject) => {
+    if (!SAMPLE_PHOTOS.some((sample) => sample.name === name)) {
+      reject(new Error(`Unknown sample ${name}`));
+      return;
+    }
     const image = new Image();
     image.onload = () => resolve(photoFromImage(`${name}.jpg`, image, null));
     image.onerror = () => reject(new Error(`Could not load sample ${name}`));
@@ -48,6 +54,7 @@ export function addPhotoToState(state, photo) {
   }
 }
 
+/** Remove a photo, release its object URL, and reassign panels that used it. */
 export function removePhotoFromState(state, photoId) {
   const index = state.photos.findIndex((photo) => photo.id === photoId);
   if (index === -1) return;
