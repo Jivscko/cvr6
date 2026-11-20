@@ -35,6 +35,7 @@ export function initEditor(state) {
   const stage = byId('stage');
   const canvas = byId('preview-canvas');
   const ctx = canvas.getContext('2d');
+  if (!ctx) throw new Error('Canvas 2D is not available');
   const stageHint = byId('stage-hint');
   const statusEl = byId('status');
   const photoInput = byId('photo-input');
@@ -114,7 +115,7 @@ export function initEditor(state) {
       panelChips.appendChild(chip);
     }
     panelIndicator.textContent = String(state.selectedPanel + 1);
-    const panel = state.panels[state.selectedPanel];
+    const panel = state.panels[state.selectedPanel] ?? state.panels[0];
     zoomInput.value = String(Math.round(panel.zoom * 100));
     zoomValue.textContent = `${Math.round(panel.zoom * 100)}%`;
     gradeInput.value = String(Math.round(state.grade * 100));

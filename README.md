@@ -44,10 +44,12 @@ MAKEFUN_OUTPUT_DIR=/output node main.ts
 
 `main.ts` copies `app/` and `screenshots/` to the output directory and writes
 `dossier.json` using the vendored `vendor/makefun-app.ts` (kept unchanged) with
-the bounty's caps. Outside the grader, point `MAKEFUN_OUTPUT_DIR` anywhere:
+the bounty's caps, then reads the dossier back and verifies it is valid JSON
+(exiting 1 if anything failed). Outside the grader, point `MAKEFUN_OUTPUT_DIR`
+anywhere:
 
 ```sh
-MAKEFUN_OUTPUT_DIR=/tmp/cvrout3 node main.ts
+MAKEFUN_OUTPUT_DIR=/tmp/cvrout4 node main.ts
 ```
 
 ## Screenshots & tests

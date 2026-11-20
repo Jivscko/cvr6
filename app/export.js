@@ -30,6 +30,9 @@ export async function exportPosterPNG(state, size) {
   const blob = await new Promise((resolve, reject) => {
     canvas.toBlob((result) => (result ? resolve(result) : reject(new Error('PNG encoding failed'))), 'image/png');
   });
+  // Free the offscreen backing store promptly instead of waiting for GC.
+  canvas.width = 0;
+  canvas.height = 0;
   return blob;
 }
 

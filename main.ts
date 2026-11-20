@@ -7,7 +7,7 @@
 //   node serve.ts                            # try the app on http://localhost:8080
 //   MAKEFUN_OUTPUT_DIR=/output node main.ts  # hand the entry in
 
-import { cpSync, existsSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
+import { cpSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { buildDossier, DossierError } from './vendor/makefun-app.ts';
@@ -33,14 +33,30 @@ function copyFresh(name: string): void {
   cpSync(source, target, { recursive: true });
 }
 
+/** Read back dossier.json and prove it exists and parses; throw otherwise. */
+function verifyDossier(path: string): void {
+  if (!existsSync(path)) throw new Error('dossier.json was not written');
+  const raw = readFileSync(path, 'utf8');
+  if (raw.length === 0) throw new Error('dossier.json is empty');
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch (error) {
+    throw new Error(`dossier.json is not valid JSON: ${(error as Error).message}`);
+  }
+  if (parsed === null || typeof parsed !== 'object') throw new Error('dossier.json is not a JSON object');
+}
+
 try {
   mkdirSync(outputDir, { recursive: true });
   copyFresh('app');
   copyFresh('screenshots');
 
   const dossier = buildDossier(outputDir, CAPS);
-  writeFileSync(join(outputDir, 'dossier.json'), dossier);
-  console.log(`Cover Snap packed into ${outputDir} (dossier.json: ${dossier.length} bytes)`);
+  const dossierPath = join(outputDir, 'dossier.json');
+  writeFileSync(dossierPath, dossier);
+  verifyDossier(dossierPath);
+  console.log(`Cover Snap packed into ${outputDir} (dossier.json: ${dossier.length} bytes, verified)`);
 } catch (error) {
   if (error instanceof DossierError) {
     console.error(`Cover Snap: the dossier was refused${error.limit ? ` (${error.limit})` : ''}: ${error.message}`);
