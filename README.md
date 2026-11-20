@@ -61,7 +61,7 @@ the bounty's caps, then reads the dossier back and verifies it is valid JSON
 sources). Outside the grader, point `MAKEFUN_OUTPUT_DIR` anywhere else:
 
 ```sh
-MAKEFUN_OUTPUT_DIR=/tmp/cvrout3 node main.ts
+MAKEFUN_OUTPUT_DIR=/tmp/cvrout4 node main.ts
 ```
 
 ## Screenshots & tests

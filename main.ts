@@ -55,7 +55,9 @@ function verifyDossier(path: string): void {
   } catch (error) {
     throw new Error(`dossier.json is not valid JSON: ${(error as Error).message}`);
   }
-  if (parsed === null || typeof parsed !== 'object') throw new Error('dossier.json is not a JSON object');
+  if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    throw new Error('dossier.json is not a JSON object');
+  }
 }
 
 try {
